@@ -31,36 +31,25 @@ jobs:
       - name: Prepare SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_KEY }}" > ~/.ssh/id_rsa
+          printf '%s' "${{ secrets.VPS_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
       - name: Upload build to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key_path: ~/.ssh/id_rsa
-          port: 22
-          source: "dist/*"
-          target: "/tmp/react_build"
+        run: |
+          ssh -i ~/.ssh/id_rsa -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "mkdir -p /tmp/react_build"
+          scp -i ~/.ssh/id_rsa -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -r dist/* "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/react_build/"
 
       - name: Activate build on VPS
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key_path: ~/.ssh/id_rsa
-          port: 22
-          script: |
+        run: |
+          ssh -i ~/.ssh/id_rsa -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" '
             set -e
-
-            mkdir -p /var/www/react-app
-            rm -rf /var/www/react-app/*
-            cp -r /tmp/react_build/* /var/www/react-app/
-
-            chown -R www-data:www-data /var/www/react-app
-
-            nginx -t
-            systemctl reload nginx
+            sudo mkdir -p /var/www/react-app
+            sudo rm -rf /var/www/react-app/*
+            sudo cp -r /tmp/react_build/* /var/www/react-app/
+            sudo chown -R www-data:www-data /var/www/react-app
+            sudo nginx -t
+            sudo systemctl reload nginx
+          '
+          
