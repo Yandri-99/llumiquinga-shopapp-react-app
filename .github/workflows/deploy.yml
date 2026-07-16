@@ -29,21 +29,24 @@ jobs:
         run: npm run build
 
       - name: Prepare SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_KEY }}
+
+      - name: Add VPS to known_hosts
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_KEY }}" | base64 -d > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
       - name: Upload build to VPS
         run: |
-          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "mkdir -p /tmp/react_build"
-          scp -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -r dist/* "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/react_build/"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "mkdir -p /tmp/react_build"
+          scp -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -r dist/* "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/react_build/"
 
       - name: Activate build on VPS
         run: |
-          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" '
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" '
             set -e
             sudo mkdir -p /var/www/react-app
             sudo rm -rf /var/www/react-app/*
