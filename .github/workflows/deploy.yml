@@ -28,12 +28,21 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Prepare SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
       - name: Upload build to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_KEY }}
+          key_path: ~/.ssh/id_rsa
+          port: 22
           source: "dist/*"
           target: "/tmp/react_build"
 
@@ -42,13 +51,14 @@ jobs:
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_KEY }}
+          key_path: ~/.ssh/id_rsa
+          port: 22
           script: |
             set -e
 
             mkdir -p /var/www/react-app
             rm -rf /var/www/react-app/*
-            cp -r /tmp/react_build/dist/* /var/www/react-app/
+            cp -r /tmp/react_build/* /var/www/react-app/
 
             chown -R www-data:www-data /var/www/react-app
 
